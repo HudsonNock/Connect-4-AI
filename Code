@@ -1,0 +1,606 @@
+package pkg4x4.bot;
+
+/**
+ *
+ * @author nockh
+ */
+import java.util.ArrayList;
+import java.util.Scanner;
+
+public class Bot {
+
+    public static void main(String[] args)
+    {
+        Scanner input = new Scanner(System.in);
+        long[] board = {0b0000000000000000000000000000000000000000000000000000000000000000L, 
+                        0b0000000000000000000000000000000000000000000000000000000000000000L};
+        long[] height = {0b1000000, 0b1000000, 0b1000000, 0b1000000, 0b1000000, 0b1000000, 0b1000000};
+        
+        System.out.println("What mode do you want: playerVscomputer or computerVscomputer?");
+        String mode = input.nextLine();
+        int turn = 0;
+        int player = 1;
+        if (mode.toUpperCase().equals("PLAYERVSCOMPUTER"))
+        {
+            System.out.println("Who goes first: Player or computer?");
+            String answer = input.nextLine();
+            turn = 0;
+            if (answer.toUpperCase().equals("COMPUTER"))
+            {
+                turn = 0;
+                player = 2;
+            }
+            else
+            {
+                turn = 1;
+            }
+        }
+        boolean running = true;
+        print(board);
+        boolean check;
+        while (running)
+        {
+            check = true;
+            if (turn == 0 && check)
+            {
+                if (mode.toUpperCase().equals("PLAYERVSCOMPUTER"))
+                    System.out.println("computer move");
+                else
+                    System.out.println("computer 1 move");
+                long[] hold = new long[3];
+                if (getMoves(board) < 10)
+                        hold = bestMove(board, 0, 13, getPlaying(board), Long.valueOf(-100000), Long.valueOf(100000), getMoves(board), height);
+                    else if (getMoves(board) < 13)
+                        hold = bestMove(board, 0, 14, getPlaying(board), Long.valueOf(-100000), Long.valueOf(100000), getMoves(board), height);
+                    else if (getMoves(board) < 16)
+                        hold = bestMove(board, 0, 17, getPlaying(board), Long.valueOf(-100000), Long.valueOf(100000), getMoves(board), height);
+                    else
+                        hold = bestMove(board, 0, 22, getPlaying(board), Long.valueOf(-100000), Long.valueOf(100000), getMoves(board), height);
+                board[0] = hold[0];
+                board[1] = hold[1];
+                height = setHeight(board);
+                turn = 1;
+                check = false;
+                //memory.clear();
+            }
+            if (turn == 1 && check)
+            {
+                if (mode.toUpperCase().equals("PLAYERVSCOMPUTER"))
+                {
+                    System.out.println("Enter ur move");
+                    board = takeTurn(board, player, height);
+                    height = setHeight(board);
+                }
+                else
+                {
+                    System.out.println("computer 2 move");
+                    long[] hold = new long[3];
+                    if (getMoves(board) < 10)
+                        hold = bestMove(board, 0, 13, getPlaying(board), Long.valueOf(-100000), Long.valueOf(100000), getMoves(board), height);
+                    else if (getMoves(board) < 13)
+                        hold = bestMove(board, 0, 14, getPlaying(board), Long.valueOf(-100000), Long.valueOf(100000), getMoves(board), height);
+                    else if (getMoves(board) < 16)
+                        hold = bestMove(board, 0, 17, getPlaying(board), Long.valueOf(-100000), Long.valueOf(100000), getMoves(board), height);
+                    else
+                        hold = bestMove(board, 0, 22, getPlaying(board), Long.valueOf(-100000), Long.valueOf(100000), getMoves(board), height);
+                   
+                    board[0] = hold[0];
+                    board[1] = hold[1];
+                    height = setHeight(board);
+                }
+                turn = 0;
+                check = false;
+            }
+            print(board);
+            if (xWin(board) || oWin(board))
+            {
+                System.out.println();
+                if (mode.toUpperCase().equals("PLAYERVSCOMPUTER"))
+                {
+                    if (turn == 1)
+                        System.out.println("computer won");
+                    else
+                        System.out.println("player won");
+                }
+                else
+                {
+                    if (turn == 1)
+                        System.out.println("computer 1 won");
+                    else
+                        System.out.println("computer 2 won");
+                }
+                running = false;
+            }
+            if (tie(board))
+            {
+                System.out.println("tie");
+                running = false;
+            }
+        }
+    }
+    
+    public static long[] bestMove(long[] board, int recursionNum, int future, int playing, long alpha, long beta, int movesDone, long[] height)
+    {
+        int fakePlaying;
+        long[] returnArr = new long[3];
+        if (tie(board))
+        {
+            returnArr[0] = board[0];
+            returnArr[1] = board[1];
+            returnArr[2] = 0;
+            return returnArr;
+        }
+        if (movesDone % 2 == 1)
+            fakePlaying = 2;
+        else
+            fakePlaying = 1;
+        ArrayList<ArrayList<long[]>> posibilities = populate(board, fakePlaying, height);
+        for (int i = 0; i < posibilities.size(); i++)
+        {
+            if (win(posibilities.get(i).get(0)[0]) || win(posibilities.get(i).get(0)[1]))
+            {
+                movesDone++;
+                returnArr[0] = posibilities.get(i).get(0)[0];
+                returnArr[1] = posibilities.get(i).get(0)[1];
+                if (fakePlaying == 2)
+                {
+                    if (playing == 1)
+                    {
+                        returnArr[2] = -10000 + recursionNum;
+                        return returnArr;
+                    }
+                    else
+                    {
+                        returnArr[2] = 10000;
+                        return returnArr;
+                    }
+                }
+                else
+                {
+                    if (playing == 1)
+                    {
+                        returnArr[2] = 10000;
+                        return returnArr;
+                    }
+                    else
+                    {
+                        returnArr[2] = -10000 + recursionNum;
+                        return returnArr;
+                    }
+                }
+            }
+        }
+        
+        if (recursionNum == future)
+        {
+            if (movesDone % 2 == 1)
+            {
+                returnArr[0] = board[0];
+                returnArr[1] = board[1];
+                returnArr[2] = getFitness(board, playing, 2);
+                return returnArr;
+            }
+            else
+            {
+                returnArr[0] = board[0];
+                returnArr[1] = board[1];
+                returnArr[2] = getFitness(board, playing, 1);
+                return returnArr;
+            }
+        }
+        if (movesDone == 0)
+        {
+            board[0] = 0b0000000000000000000001000000000000000000000000000000000000000000L;
+            returnArr[0] = board[0];
+            returnArr[1] = board[1];
+            returnArr[2] = 0;
+            return returnArr;
+        }
+        ArrayList<Long> fitness = new ArrayList<Long>();
+        recursionNum++;
+        if ((movesDone % 2 == 0 && playing == 1) || (movesDone % 2 == 1 && playing == 2))
+        {
+            for (int i = 0; i < posibilities.size(); i++)
+            {
+                fitness.add(bestMove(posibilities.get(i).get(0), recursionNum, future, playing, alpha, beta, movesDone+1, posibilities.get(i).get(1))[2]);
+                if (fitness.get(i) > alpha)
+                    alpha = fitness.get(i);
+                if (alpha >= beta)
+                    break;
+            }
+            long max = fitness.get(0);
+            int index = 0;
+            for (int i = 1; i < fitness.size(); i++)
+            {
+                if (fitness.get(i) > max)
+                {
+                    max = fitness.get(i);
+                    index = i;
+                }
+            }
+            returnArr[0] = posibilities.get(index).get(0)[0];
+            returnArr[1] = posibilities.get(index).get(0)[1];
+            returnArr[2] = max;
+            return returnArr;
+        }
+        else
+        {
+            for (int i = 0; i < posibilities.size(); i++)
+            {
+                fitness.add(bestMove(posibilities.get(i).get(0), recursionNum, future, playing, alpha, beta, movesDone+1, posibilities.get(i).get(1))[2]);
+                if (fitness.get(i) < beta)
+                    beta = fitness.get(i);
+                if (alpha >= beta)
+                    break;
+            }
+            long min = fitness.get(0);
+            int index = 0;
+            for (int i = 1; i < fitness.size(); i++)
+            {
+                if (fitness.get(i) < min)
+                {
+                    min = fitness.get(i);
+                    index = i;
+                }
+            }
+            returnArr[0] = posibilities.get(index).get(0)[0];
+            returnArr[1] = posibilities.get(index).get(0)[1];
+            returnArr[2] = min;
+            return returnArr;
+        }
+    }
+    
+    public static int getFitness(long[] board, int playing, int turn)
+    {
+        if (turn == 1)
+        {
+            if (xWin(board))
+            {
+                if (playing == 1)
+                    return 10000;
+                else
+                    return -10000;
+            }
+        }
+        else
+        {
+            if (oWin(board))
+            {
+                if (playing == 1)
+                    return -10000;
+                else
+                    return 10000;
+            }
+        }
+        if (tie(board))
+            return 0;
+        
+        int threeInRowX = 0;
+        int threeInRowO = 0;
+
+        int hasMiddleO = 0;
+        int hasMiddleX = 0;
+        
+        if ((board[0] & 0b0000000000000000000001000000000000000000000000000000000000000000L) != 0)
+            hasMiddleX++;
+        if ((board[0] & 0b0000000000000000000000100000000000000000000000000000000000000000L) != 0)
+            hasMiddleX++;
+        if ((board[0] & 0b0000000000000000000000010000000000000000000000000000000000000000L) != 0)
+            hasMiddleX++;
+        if ((board[0] & 0b0000000000000000000000001000000000000000000000000000000000000000L) != 0)
+            hasMiddleX++;
+        if ((board[0] & 0b0000000000000000000000000100000000000000000000000000000000000000L) != 0)
+            hasMiddleX++;
+        if ((board[0] & 0b0000000000000000000000000010000000000000000000000000000000000000L) != 0)
+            hasMiddleX++;
+        if ((board[1] & 0b0000000000000000000001000000000000000000000000000000000000000000L) != 0)
+            hasMiddleO++;
+        if ((board[1] & 0b0000000000000000000000100000000000000000000000000000000000000000L) != 0)
+            hasMiddleO++;
+        if ((board[1] & 0b0000000000000000000000010000000000000000000000000000000000000000L) != 0)
+            hasMiddleO++;
+        if ((board[1] & 0b0000000000000000000000001000000000000000000000000000000000000000L) != 0)
+            hasMiddleO++;
+        if ((board[1] & 0b0000000000000000000000000100000000000000000000000000000000000000L) != 0)
+            hasMiddleO++;
+        if ((board[1] & 0b0000000000000000000000000010000000000000000000000000000000000000L) != 0)
+            hasMiddleO++;
+       
+
+        if ((board[0] & (board[0] << 7) & (board[0] << 14) & (~(board[1] << 21))) != 0) 
+            threeInRowX++;
+        if ((board[0] & (board[0] << 1) & (board[0] << 2) & (~(board[1] << 3))) != 0)
+            threeInRowX++;
+        if ((board[0] & (board[0] << 6) & (board[0] << 12) & (~(board[1] << 18))) != 0)
+            threeInRowX++;
+        if ((board[0] & (board[0] << 8) & (board[0] << 16) & (~(board[1] << 24))) != 0)
+            threeInRowX++;
+            
+        if ((board[1] & (board[1] << 7) & (board[1] << 14) & (~(board[0] << 21))) != 0) 
+            threeInRowO++;
+        if ((board[1] & (board[1] << 1) & (board[1] << 2) & (~(board[0] << 3))) != 0)
+            threeInRowO++;
+        if ((board[1] & (board[1] << 6) & (board[1] << 12) & (~(board[0] << 18))) != 0)
+            threeInRowO++;
+        if ((board[1] & (board[1] << 8) & (board[1] << 16) & (~(board[0] << 24))) != 0)
+            threeInRowO++;
+        
+        int returnScore = hasMiddleX * 6 - hasMiddleO * 5 + threeInRowX * 7 - threeInRowO * 7;
+        if (playing == 2)
+            returnScore *= -1;
+        return returnScore;
+    }
+    
+    public static ArrayList<ArrayList<long[]>> populate(long[] board, int playing, long[] height)
+    {
+        ArrayList<ArrayList<long[]>> returnArr = new ArrayList<ArrayList<long[]>>();
+        long TOP = 0b0000001;
+        for (int i = 0; i < 7; i++)
+        {
+            if ((height[i] & TOP) == 0)
+            {
+                if (playing == 1)
+                {
+                    long temp = height[i] << (i*-7 + 57);
+                    long[] tempBoards = new long[2];
+                    long[] heightTemp = new long[7];
+                    for (int j = 0; j < 7; j++)
+                        heightTemp[j] = height[j];
+                    heightTemp[i] >>= 1;
+                    tempBoards[0] = board[0] ^ temp;
+                    tempBoards[1] = board[1];
+                    ArrayList<long[]> boards = new ArrayList<long[]>();
+                    boards.add(tempBoards);
+                    boards.add(heightTemp);
+                    returnArr.add(boards);
+                }
+                if (playing == 2)
+                {
+                    long temp = height[i] << (i*-7 + 57);
+                    long[] tempBoards = new long[2];
+                    long[] heightTemp = new long[7];
+                    for (int j = 0; j < 7; j++)
+                        heightTemp[j] = height[j];
+                    heightTemp[i] >>= 1;
+                    tempBoards[1] = board[1] ^ temp;
+                    tempBoards[0] = board[0];
+                    ArrayList<long[]> boards = new ArrayList<long[]>();
+                    boards.add(tempBoards);
+                    boards.add(heightTemp);
+                    returnArr.add(boards);
+                }
+            }
+        }
+        return returnArr;
+    }
+    
+    public static long[] takeTurn(long[] board, int playing, long[] height)
+    {
+        Scanner input = new Scanner(System.in);
+        boolean choice = true;
+        while (choice)
+        {
+            if (playing == 1)
+            {
+                try {
+                    int i = input.nextInt();
+                    if ((height[i-1] ^ 0b0000001) != 0)
+                    {
+                        String pos = Long.toBinaryString(height[i-1]);
+                        while (pos.length() != 7)
+                            pos = "0" + pos;
+                        for (int j = 0; j < (i-1) * 7; j++)
+                            pos = "0" + pos;
+                        while (pos.length() != 64)
+                            pos = pos + "0";
+                        long num = 0L;
+                        for (int k = 0; k < 64; k++) {
+                            if (pos.charAt(k) == '1') {
+                                num ^= 1L << (63 - k);
+                            }
+                        }
+                        board[0] = num ^ board[0];
+                        choice = false;
+                    }
+                    else
+                        System.out.println("Invalid input, try again");
+                }
+                catch(Exception e) {
+                    System.out.println("Invalid input, try again");
+                }
+            }
+            if (playing == 2)
+            {
+                try {
+                    int i = input.nextInt();
+                    if ((height[i-1] ^ 0b0000001) != 0)
+                    {
+                        String pos = Long.toBinaryString(height[i-1]);
+                        while (pos.length() != 7)
+                            pos = "0" + pos;
+                        for (int j = 0; j < (i-1) * 7; j++)
+                            pos = "0" + pos;
+                        while (pos.length() != 64)
+                            pos = pos + "0";
+                        long num = 0L;
+                        for (int k = 0; k < 64; k++) {
+                            if (pos.charAt(k) == '1') {
+                                num ^= 1L << (63 - k);
+                            }
+                        }
+                        board[1] = num ^ board[1];
+                        choice = false;
+                    }
+                    else
+                        System.out.println("Invalid input, try again");
+                }
+                catch(Exception e) {
+                    System.out.println("Invalid input, try again");
+                }
+            }
+        }
+        return board;
+    }
+    
+    public static int getPlaying(long[] board)
+    {
+        int movesDone = 0;
+        String printX = Long.toBinaryString(board[0]);
+        String printO = Long.toBinaryString(board[1]);
+        for (int i = 0; i < printX.length(); i++)
+        {
+            if (printX.charAt(i) == '1')
+                movesDone++;
+        }
+        for (int i = 0; i < printO.length(); i++)
+        {
+            if (printO.charAt(i) == '1')
+                movesDone++;
+        }
+        if (movesDone % 2 == 0)
+            return 1;
+        return 2;
+    }
+    
+    public static int getMoves(long[] board)
+    {
+        int movesDone = 0;
+        String printX = Long.toBinaryString(board[0]);
+        String printO = Long.toBinaryString(board[1]);
+        for (int i = 0; i < printX.length(); i++)
+        {
+            if (printX.charAt(i) == '1')
+                movesDone++;
+        }
+        for (int i = 0; i < printO.length(); i++)
+        {
+            if (printO.charAt(i) == '1')
+                movesDone++;
+        }
+        return movesDone;
+    }
+    
+    public static void print(long[] board)
+    {
+        String printX = Long.toBinaryString(board[0]);
+        String printO = Long.toBinaryString(board[1]);
+        
+        while (printX.length() != 64)
+            printX = "0" + printX;
+        while (printO.length() != 64)
+            printO = "0" + printO;
+        
+        for (int i = 0; i < 7; i++)
+        {
+            System.out.print((i+1) + " ");
+        }
+        System.out.println();
+        for (int j = 5; j >= 0; j--)
+        {
+            for (int i = j; i < 48; i += 7)
+            {
+                if (printX.charAt(i) == '1')
+                    System.out.print("x ");
+                else if (printO.charAt(i) == '1')
+                    System.out.print("o ");
+                else
+                    System.out.print("- ");
+            }
+            System.out.println();
+        }
+    }
+    
+    public static boolean xWin(long[] boarder)
+    {
+        long board = boarder[0];
+        if ((board & (board<<7) & (board<<14) & (board<<21)) != 0) 
+            return true;
+        if ((board & (board << 1) & (board << 2) & (board << 3)) != 0)
+            return true;
+        if ((board & (board << 6) & (board << 12) & (board << 18)) != 0)
+            return true;
+        if ((board & (board << 8) & (board << 16) & (board << 24)) != 0)
+            return true;
+        return false;
+    }
+    
+    public static boolean oWin(long[] boarder)
+    {
+        long board = boarder[1];
+        if ((board & (board<<7) & (board<<14) & (board<<21)) != 0) 
+            return true;
+        if ((board & (board << 1) & (board << 2) & (board << 3)) != 0)
+            return true;
+        if ((board & (board << 6) & (board << 12) & (board << 18)) != 0)
+            return true;
+        if ((board & (board << 8) & (board << 16) & (board << 24)) != 0)
+            return true;
+        return false;
+    }
+    
+    public static boolean win(long board)
+    {
+        if ((board & (board << 7) & (board << 14) & (board << 21)) != 0) 
+            return true;
+        if ((board & (board << 1) & (board << 2) & (board << 3)) != 0)
+            return true;
+        if ((board & (board << 6) & (board << 12) & (board << 18)) != 0)
+            return true;
+        if ((board & (board << 8) & (board << 16) & (board << 24)) != 0)
+            return true;
+        return false;
+    }
+    
+    
+    
+    public static long[] setHeight(long[] boarder)
+    {
+        long[] heights = new long[7];
+        long board = boarder[0] ^ boarder[1];
+        String boardStr = Long.toBinaryString(board);
+        while (boardStr.length() != 64)
+            boardStr = "0" + boardStr;
+        String col1 = boardStr.substring(0,7);
+        String col2 = boardStr.substring(7,14);
+        String col3 = boardStr.substring(14,21);
+        String col4 = boardStr.substring(21,28);
+        String col5 = boardStr.substring(28,35);
+        String col6 = boardStr.substring(35,42);
+        String col7 = boardStr.substring(42,49);
+        ArrayList<String> list = new ArrayList<String>();
+        list.add(col1);
+        list.add(col2);
+        list.add(col3);
+        list.add(col4);
+        list.add(col5);
+        list.add(col6);
+        list.add(col7);
+        for (int i = 0; i < heights.length; i++)
+        {
+            String pos = "1000000";
+            int k = 0;
+            while (list.get(i).charAt(k) != '0')
+            {
+                pos = "0" + pos;
+                pos = pos.substring(0,7);
+                k++;
+            }
+            long num = 0b0;
+            for (int j = 0; j < 7; j++) {
+                if (pos.charAt(j) == '1') {
+                    num ^= 0b1 << (6 - j);
+                }
+            }
+            heights[i] = num;
+        }
+        return heights;
+    }
+    
+    public static boolean tie(long[] boarder)
+    {
+        long board = boarder[0] ^ boarder[1];
+        if ((board ^ 0b1111110111111011111101111110111111011111101111110000000000000000L) == 0)
+            return true;
+        return false;
+    }
+}
